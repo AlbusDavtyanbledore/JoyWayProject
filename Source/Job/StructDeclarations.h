@@ -9,6 +9,25 @@
 
 class AItemBase;
 
+UENUM(BlueprintType)
+enum class EItemType : uint8
+{
+	None,
+	Weapon,
+	Grenade,
+	Foutniture
+};
+
+UENUM(BlueprintType)
+enum class EWeaponEvent : uint8
+{
+	None,
+	Shooting,
+	StopShooting,
+	Reload,
+	Empty
+};
+
 USTRUCT(BlueprintType)
 struct FItemData
 {
@@ -20,16 +39,60 @@ public:
 	FName ItemName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TSubclassOf<class AItemBase> ItemClass;
+	const UTexture2D* ItemTexture;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UTexture2D* ItemTexture;
+	EItemType ItemType;
 	
 	FItemData()
 	{
 		ItemName = "None";
-		ItemClass = nullptr;
 		ItemTexture = nullptr;
+		ItemType = EItemType::None;
+	}
+
+	FItemData(const FName InItemName, UTexture2D* InItemTexture, const EItemType InItemType)
+	{
+		ItemName = InItemName;
+		ItemTexture = InItemTexture;
+		ItemType = InItemType;
+	}
+};
+
+USTRUCT(BlueprintType)
+struct FWeaponData
+{
+	GENERATED_USTRUCT_BODY()
+
+public:
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 MagazineSize;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float DamageAmount;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float TimeToReload;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float ShootingFrequency;
+	
+	FWeaponData()
+	{
+		MagazineSize = 0;
+		DamageAmount = 0.0f;
+		TimeToReload = 0.f;
+		ShootingFrequency = 0.0f;
+		
+	}
+
+	FWeaponData(const int32 InMagazineSize, const float InDamageAmount, const float InTimeToReload, const float InShootingFrequency)
+	{
+		MagazineSize = InMagazineSize;
+		DamageAmount = InDamageAmount;
+		TimeToReload = InTimeToReload;
+		ShootingFrequency = InShootingFrequency;
 	}
 };
 

@@ -27,10 +27,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings|ItemData", meta = (ExposeOnspawn = true))
 	FItemData ItemData;
 
-	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Settings|Mesh", meta = (ExposeOnSpawn = true))
-	//bool bShouldSimulatePhysics;
-
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
 	UStaticMeshComponent* GetItemMeshComponent() const;
+
+	UFUNCTION(BlueprintCallable)
+	FItemData GetItemData() const;
 	
 };

@@ -30,19 +30,25 @@ void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 void UInventoryComponent::SetInventorySize(const int32 ToSize)
 {
 	InventorySize = ToSize;
-	Inventory.Init(FItemData(), ToSize);
+	Inventory.Init(FItemInventoryData(), ToSize);
 }
 
 bool UInventoryComponent::AddItemToInventory(const AItemBase* InItem)
 {
+	UClass* ItemClass = InItem->GetClass();
+	
 	for(int i = 0; i < Inventory.Num(); i++)
 	{
-		FItemData CurrentItem = Inventory[i];
+		FItemInventoryData CurrentItem = Inventory[i];
 		
 		if(CurrentItem.ItemClass == nullptr)
 		{
 			const FItemData ItemInfo = InItem->ItemData;
-			Inventory[i] = ItemInfo;
+			
+			Inventory[i].ItemName = ItemInfo.ItemName;
+			Inventory[i].ItemTexture = ItemInfo.ItemTexture;
+			Inventory[i].ItemType = ItemInfo.ItemType;
+			Inventory[i].ItemClass = ItemClass;
 
 			OnItemAdded.Broadcast(ItemInfo, i);
 			return true;
@@ -55,13 +61,13 @@ void UInventoryComponent::RemoveItemFromInventory(const int32 OnIndex)
 {
 	if(Inventory.IsValidIndex(OnIndex))
 	{
-		Inventory[OnIndex] = FItemData();
+		Inventory[OnIndex] = FItemInventoryData();
 
 		OnItemRemoved.Broadcast(OnIndex);
 	}
 }
 
-TArray<FItemData> UInventoryComponent::GetInventory() const
+TArray<FItemInventoryData> UInventoryComponent::GetInventory() const
 {
 	return Inventory;
 }
