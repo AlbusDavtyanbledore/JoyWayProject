@@ -3,12 +3,20 @@
 
 #include "WeaponBase.h"
 #include "Kismet/GameplayStatics.h"
+#include "Particles/ParticleSystemComponent.h"
 
 // Sets default values
 AWeaponBase::AWeaponBase()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+
+	AutoFire = false;
+	bIsReloading = false;
+	TotalAmmo = 0;
+	ShotDistance = 0;
+	CurrentMagazine = 0;
+	AmmoToReload = 0;
 }
 
 // Called when the game starts or when spawned
@@ -30,7 +38,7 @@ FWeaponData AWeaponBase::GetWeaponData() const
 
 int32 AWeaponBase::GetCurrentBulletCount() const
 {
-	return CurrentBulletCount;
+	return TotalAmmo;
 }
 
 int32 AWeaponBase::GetCurrentMagazine() const
@@ -38,91 +46,110 @@ int32 AWeaponBase::GetCurrentMagazine() const
 	return CurrentMagazine;
 }
 
-EWeaponEvent AWeaponBase::InstigateWeaponShot(const bool bStopShooting)
+bool AWeaponBase::UseWeapon()
 {
-	if(CurrentBulletCount > 0)
+	if(AbleToUseWeapon())
 	{
-		if(CurrentMagazine > 0)
-		{
-			if(!bStopShooting)
-			{
-				//ShootingTimer.Invalidate();
-				GetWorldTimerManager().SetTimer(ShootingTimer, this, &AWeaponBase::ShootingFunction, WeaponData.ShootingFrequency, true);
-				UKismetSystemLibrary::PrintString(this, "Started");
-				ShootingFunction();
-				return EWeaponEvent::Shooting;
-			}
-			ShootingTimer.Invalidate();
-			UKismetSystemLibrary::PrintString(this, "Ended");
-			return EWeaponEvent::StopShooting;
-		}
-		else
-		{
-			ReloadWeapon();
-			return EWeaponEvent::Reload;
-		}
-	}
-	return EWeaponEvent::Empty;
-}
+		//Timer
+		CurrentMagazine--;
+		bIsUsingWeapon = true;
+		GetWorldTimerManager().SetTimer(CooldownTimer, this, &AWeaponBase::StopRateDelay, WeaponData.ShootingRate, false);
+		OnWeaponUse.Broadcast(this);
 
-void AWeaponBase::ShootingFunction()
-{
-	if(CurrentMagazine > 0)
-	{
+		//Trace
 		FTransform StartShotPoint = GetWeaponStartShotPoint();
 		FHitResult Hit;
-
 		FVector Start = StartShotPoint.GetLocation();
 		FVector End = Start + (StartShotPoint.GetRotation().Vector() * ShotDistance);
-
 		FCollisionQueryParams TraceParams;
 		bool bHitInstigated = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, TraceParams);
 
-		// if(bHitInstigated)
-		// {
-		// 	if(Hit.bBlockingHit)
-		// 	{
-		// 		//UKismetSystemLibrary::DrawDebugSphere(this, End, 5.0f, 12, FLinearColor::White, 5.0f, 2.0f);
-		// 		//UKismetSystemLibrary::PrintString(this, End.ToString());
-		// 	}
-		// }
-		UKismetSystemLibrary::PrintString(this, "Shot");
-		CurrentBulletCount--;
-		CurrentMagazine--;
-		
-		OnWeaponShotInstigated(Start, End, bHitInstigated, Hit);
-		//ShotInstigated.Broadcast(Start, End, bHitInstigated, Hit);
+		//Particle
+		UGameplayStatics::SpawnEmitterAttached(WeaponParticle, GetItemMeshComponent(), "root",GetWeaponStartShotPoint().GetLocation(),
+			FRotator(0,0,0), FVector(0.3,0.3,0.3), EAttachLocation::KeepWorldPosition, true, EPSCPoolMethod::None, true);
+
+		//Reload
+		if(CurrentMagazine <= 0 && TotalAmmo > 0)
+		{
+			ReloadWeapon();
+		}
+		return true;
+	}
+	bIsUsingWeapon = false;
+	return false;
+}
+
+void AWeaponBase::ToggleWeaponUse(const bool bUse)
+{
+	if(bUse)
+	{
+		if(AbleToUseWeapon())
+		{
+			UseWeapon();
+		}
 	}
 	else
 	{
-		ReloadWeapon();
+		if(bIsUsingWeapon)
+		{
+			StopUseWeapon();
+		}
 	}
+}
+
+void AWeaponBase::StopRateDelay()
+{
+	GetWorldTimerManager().ClearTimer(CooldownTimer);
+	if(AutoFire)
+	{
+		UseWeapon();
+	}
+}
+
+void AWeaponBase::StopUseWeapon()
+{
+	bIsUsingWeapon = false;
+	OnStopWeaponUse.Broadcast(this);
+}
+
+bool AWeaponBase::AbleToUseWeapon() const
+{
+	return CurrentMagazine > 0 && !CooldownTimer.IsValid();
 }
 
 void AWeaponBase::ReloadWeapon()
 {
-	// FTimerHandle ReloadingTimer;
-	GetWorldTimerManager().SetTimer(ReloadingTimer, this, &AWeaponBase::ReloadingFunction, WeaponData.TimeToReload, false);
-	ShootingTimer.Invalidate();
-	OnWeaponReloadStarted.Broadcast();
-	UKismetSystemLibrary::PrintString(this, "Reload");
+	if(!bIsReloading)
+	{
+		bIsReloading = true;
+		GetWorldTimerManager().SetTimer(ReloadTimer, this, &AWeaponBase::FinishReload, WeaponData.TimeToReload, false);
+		AmmoToReload = FMath::Min(GetClass()->GetDefaultObject<AWeaponBase>()->GetCurrentMagazine() - CurrentMagazine, TotalAmmo);
+		OnReloadStart.Broadcast(this);
+	}
+	else
+	{
+		GetWorldTimerManager().ClearTimer(ReloadTimer);
+		OnReloadFinish.Broadcast(this);
+	}
 }
 
-void AWeaponBase::ReloadingFunction()
+void AWeaponBase::FinishReload()
 {
-	UKismetSystemLibrary::PrintString(this, "Reloaded");
-	CurrentMagazine = WeaponData.MagazineSize;
-	ReloadingTimer.Invalidate();
-	OnWeaponReloadCompleted.Broadcast();
+	bIsReloading = false;
+	ReloadWeapon();
+	CurrentMagazine = CurrentMagazine + AmmoToReload;
+	TotalAmmo = TotalAmmo - AmmoToReload;
 }
 
 int32 AWeaponBase::InitializeWeapon()
 {
-	if(WeaponData.MagazineSize <= CurrentBulletCount)
+	if(WeaponData.MagazineSize <= TotalAmmo)
 	{
 		CurrentMagazine = WeaponData.MagazineSize;
 		return CurrentMagazine;
 	}
-	CurrentMagazine = CurrentBulletCount;
+	CurrentMagazine = TotalAmmo;
 	return CurrentMagazine;
 }
+
+

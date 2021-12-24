@@ -76,14 +76,14 @@ public:
 	float TimeToReload;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float ShootingFrequency;
+	float ShootingRate;
 	
 	FWeaponData()
 	{
 		MagazineSize = 0;
 		DamageAmount = 0.0f;
 		TimeToReload = 0.f;
-		ShootingFrequency = 0.0f;
+		ShootingRate = 0.0f;
 		
 	}
 
@@ -92,7 +92,7 @@ public:
 		MagazineSize = InMagazineSize;
 		DamageAmount = InDamageAmount;
 		TimeToReload = InTimeToReload;
-		ShootingFrequency = InShootingFrequency;
+		ShootingRate = InShootingFrequency;
 	}
 };
 

@@ -6,10 +6,13 @@
 #include "ItemBase.h"
 #include "WeaponBase.generated.h"
 
+class AWeaponBase;
 
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FShotIstigate, FVector, StartShotPoint, FVector, EndShotPoint, bool, bIsHitSomething, FHitResult, HitResult);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FReloadingStart);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FReloadingComplete);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FWeaponUse, AWeaponBase*, Weapon);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStopWeaponUse, AWeaponBase*, Weapon);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FReloadStart, AWeaponBase*, Weapon);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FReloadFinish, AWeaponBase*, Weapon);
+
 /**
  * 
  */
@@ -40,7 +43,12 @@ class JOB_API AWeaponBase : public AItemBase
 	float ShotDistance;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings|WeaponData")
-	int32 CurrentBulletCount;
+	int32 TotalAmmo;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings|WeaponData")
+	bool AutoFire;
+	
+	bool bFireIsActive;
 
 	UFUNCTION(BlueprintCallable)
 	FWeaponData GetWeaponData() const;
@@ -51,29 +59,44 @@ class JOB_API AWeaponBase : public AItemBase
 	UFUNCTION(BlueprintCallable)
 	int32 GetCurrentMagazine() const;
 
+	bool UseWeapon();
+
 	UFUNCTION(BlueprintCallable)
-	EWeaponEvent InstigateWeaponShot(const bool bStopShooting);
+	void ToggleWeaponUse(const bool bUse);
 
-	void ShootingFunction();
+	bool bIsReloading;
+	bool bIsUsingWeapon;
 
+	int32 AmmoToReload;
+
+	void StopRateDelay();
+
+	void StopUseWeapon();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|WeaponData")
+	UParticleSystem* WeaponParticle;
+
+	bool AbleToUseWeapon() const;
+
+	FTimerHandle CooldownTimer;
+	FTimerHandle ReloadTimer;
+
+	UPROPERTY(BlueprintAssignable)
+	FWeaponUse OnWeaponUse;
+
+	UPROPERTY(BlueprintAssignable)
+	FStopWeaponUse OnStopWeaponUse;
+
+	UPROPERTY(BlueprintAssignable)
+	FReloadStart OnReloadStart;
+
+	UPROPERTY(BlueprintAssignable)
+	FReloadFinish OnReloadFinish;
+
+	UFUNCTION(BlueprintCallable)
 	void ReloadWeapon();
-
-	void ReloadingFunction();
-
-	//UPROPERTY(BlueprintAssignable)
-	//FShotIstigate ShotInstigated;
-
-	FTimerHandle ReloadingTimer;
-	FTimerHandle ShootingTimer;
-
-	UPROPERTY(BlueprintAssignable)
-	FReloadingStart OnWeaponReloadStarted;
-
-	UPROPERTY(BlueprintAssignable)
-	FReloadingComplete OnWeaponReloadCompleted;
-
-	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent) //Called after weapon shot has been instigated
-	void OnWeaponShotInstigated(FVector InStartShotPoint, FVector InEndShotPoint, bool bIsInHit, FHitResult InHitResult);
+	
+	void FinishReload();
 	
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent) //Called before weapon shot has been instigated to get the start shoting point
 	FTransform GetWeaponStartShotPoint() const;
