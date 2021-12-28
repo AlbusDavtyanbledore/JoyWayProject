@@ -12,10 +12,9 @@ AWeaponBase::AWeaponBase()
 	PrimaryActorTick.bCanEverTick = true;
 
 	AutoFire = false;
-	bIsReloading = false;
-	TotalAmmo = 0;
+	TotalAmmo = INDEX_NONE;
 	ShotDistance = 0;
-	CurrentMagazine = 0;
+	CurrentMagazine = INDEX_NONE;
 	AmmoToReload = 0;
 }
 
@@ -36,7 +35,7 @@ FWeaponData AWeaponBase::GetWeaponData() const
 	return WeaponData;
 }
 
-int32 AWeaponBase::GetCurrentBulletCount() const
+int32 AWeaponBase::GetTotalAmmo() const
 {
 	return TotalAmmo;
 }
@@ -50,9 +49,11 @@ bool AWeaponBase::UseWeapon()
 {
 	if(AbleToUseWeapon())
 	{
-		//Timer
+		//Magazine
 		CurrentMagazine--;
 		bIsUsingWeapon = true;
+		
+		//Timer
 		GetWorldTimerManager().SetTimer(CooldownTimer, this, &AWeaponBase::StopRateDelay, WeaponData.ShootingRate, false);
 		OnWeaponUse.Broadcast(this);
 
@@ -65,9 +66,13 @@ bool AWeaponBase::UseWeapon()
 		bool bHitInstigated = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, TraceParams);
 
 		//Particle
-		UGameplayStatics::SpawnEmitterAttached(WeaponParticle, GetItemMeshComponent(), "root",GetWeaponStartShotPoint().GetLocation(),
-			FRotator(0,0,0), FVector(0.3,0.3,0.3), EAttachLocation::KeepWorldPosition, true, EPSCPoolMethod::None, true);
+		if(bHitInstigated)
+			UGameplayStatics::SpawnEmitterAtLocation(this, WeaponParticle, Hit.Location);
+		else
+			UGameplayStatics::SpawnEmitterAtLocation(this, WeaponParticle, End);
 
+		//UKismetSystemLibrary::PrintString(this, "Shoot!", true, true, FLinearColor::Red, 10.0f);
+		
 		//Reload
 		if(CurrentMagazine <= 0 && TotalAmmo > 0)
 		{
@@ -75,17 +80,18 @@ bool AWeaponBase::UseWeapon()
 		}
 		return true;
 	}
-	bIsUsingWeapon = false;
 	return false;
 }
 
 void AWeaponBase::ToggleWeaponUse(const bool bUse)
 {
+	//UKismetSystemLibrary::PrintString(this, "Use!", true, true, FLinearColor::Red, 10.0f);
 	if(bUse)
 	{
 		if(AbleToUseWeapon())
 		{
 			UseWeapon();
+			//UKismetSystemLibrary::PrintString(this, "Use!", true, true, FLinearColor::Red, 10.0f);
 		}
 	}
 	else
@@ -108,6 +114,8 @@ void AWeaponBase::StopRateDelay()
 
 void AWeaponBase::StopUseWeapon()
 {
+	GetWorldTimerManager().ClearTimer(CooldownTimer);
+	//UKismetSystemLibrary::PrintString(this, "StopShooting!", true, true, FLinearColor::Green, 10.0f);
 	bIsUsingWeapon = false;
 	OnStopWeaponUse.Broadcast(this);
 }
@@ -119,37 +127,40 @@ bool AWeaponBase::AbleToUseWeapon() const
 
 void AWeaponBase::ReloadWeapon()
 {
-	if(!bIsReloading)
-	{
-		bIsReloading = true;
-		GetWorldTimerManager().SetTimer(ReloadTimer, this, &AWeaponBase::FinishReload, WeaponData.TimeToReload, false);
-		AmmoToReload = FMath::Min(GetClass()->GetDefaultObject<AWeaponBase>()->GetCurrentMagazine() - CurrentMagazine, TotalAmmo);
-		OnReloadStart.Broadcast(this);
-	}
-	else
-	{
-		GetWorldTimerManager().ClearTimer(ReloadTimer);
-		OnReloadFinish.Broadcast(this);
-	}
+	//UKismetSystemLibrary::PrintString(this, "ReloadStart!", true, true, FLinearColor::Green, 10.0f);
+	GetWorldTimerManager().SetTimer(ReloadTimer, this, &AWeaponBase::FinishReload, WeaponData.TimeToReload, false);
+	AmmoToReload = FMath::Min(GetClass()->GetDefaultObject<AWeaponBase>()->WeaponData.MagazineSize - CurrentMagazine, TotalAmmo);
+	OnReloadStart.Broadcast(this);
 }
 
 void AWeaponBase::FinishReload()
 {
-	bIsReloading = false;
-	ReloadWeapon();
 	CurrentMagazine = CurrentMagazine + AmmoToReload;
 	TotalAmmo = TotalAmmo - AmmoToReload;
+	
+	if(bIsUsingWeapon)
+		UseWeapon();
+	OnReloadFinish.Broadcast(this);
+	GetWorldTimerManager().ClearTimer(ReloadTimer);
 }
 
 int32 AWeaponBase::InitializeWeapon()
 {
-	if(WeaponData.MagazineSize <= TotalAmmo)
+	if(TotalAmmo > WeaponData.MagazineSize)
 	{
 		CurrentMagazine = WeaponData.MagazineSize;
-		return CurrentMagazine;
 	}
-	CurrentMagazine = TotalAmmo;
+	else
+	{
+		CurrentMagazine = TotalAmmo;
+	}
+
 	return CurrentMagazine;
+}
+
+FTimerHandle AWeaponBase::GetReloadTimer() const
+{
+	return ReloadTimer;
 }
 
 

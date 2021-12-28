@@ -27,6 +27,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings|ItemData", meta = (ExposeOnspawn = true))
 	FItemData ItemData;
 
+	UPROPERTY(BlueprintReadWrite, meta = (ExposeOnSpawn = true))
+	int32 ItemInventoryIndex;
+
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
 	UStaticMeshComponent* GetItemMeshComponent() const;
 

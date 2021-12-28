@@ -62,7 +62,7 @@ void UInventoryComponent::RemoveItemFromInventory(const int32 OnIndex)
 	if(Inventory.IsValidIndex(OnIndex))
 	{
 		Inventory[OnIndex] = FItemInventoryData();
-
+		OnItemBeenRemoved(OnIndex);
 		OnItemRemoved.Broadcast(OnIndex);
 	}
 }

@@ -72,6 +72,9 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FItemRemoved OnItemRemoved;
 
+	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
+	void OnItemBeenRemoved(int32 OfIndex);
+
 	UFUNCTION(BlueprintCallable)
 	TArray<FItemInventoryData> GetInventory() const;
 

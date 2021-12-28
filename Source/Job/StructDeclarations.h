@@ -80,7 +80,7 @@ public:
 	
 	FWeaponData()
 	{
-		MagazineSize = 0;
+		MagazineSize = 0.0f;
 		DamageAmount = 0.0f;
 		TimeToReload = 0.f;
 		ShootingRate = 0.0f;

@@ -54,7 +54,7 @@ class JOB_API AWeaponBase : public AItemBase
 	FWeaponData GetWeaponData() const;
 
 	UFUNCTION(BlueprintCallable)
-	int32 GetCurrentBulletCount() const;
+	int32 GetTotalAmmo() const;
 
 	UFUNCTION(BlueprintCallable)
 	int32 GetCurrentMagazine() const;
@@ -64,7 +64,6 @@ class JOB_API AWeaponBase : public AItemBase
 	UFUNCTION(BlueprintCallable)
 	void ToggleWeaponUse(const bool bUse);
 
-	bool bIsReloading;
 	bool bIsUsingWeapon;
 
 	int32 AmmoToReload;
@@ -103,5 +102,8 @@ class JOB_API AWeaponBase : public AItemBase
 
 	UFUNCTION(BlueprintCallable)
 	int32 InitializeWeapon();
+
+	UFUNCTION(BlueprintCallable)
+	FTimerHandle GetReloadTimer() const;
 	
 };
