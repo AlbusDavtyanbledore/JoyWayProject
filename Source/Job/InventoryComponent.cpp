@@ -2,6 +2,7 @@
 
 
 #include "InventoryComponent.h"
+// #include "Containers\Array.h";
 
 // Sets default values for this component's properties
 UInventoryComponent::UInventoryComponent()
@@ -36,24 +37,25 @@ void UInventoryComponent::SetInventorySize(const int32 ToSize)
 bool UInventoryComponent::AddItemToInventory(const AItemBase* InItem)
 {
 	UClass* ItemClass = InItem->GetClass();
-	
-	for(int i = 0; i < Inventory.Num(); i++)
+	const FItemData ItemInfo = InItem->ItemData; //Added
+
+	//Added ranged-for
+	auto InventoryIterator = Inventory.CreateIterator();
+	for (auto& CurrentItem : Inventory)
 	{
-		FItemInventoryData CurrentItem = Inventory[i];
-		
 		if(CurrentItem.ItemClass == nullptr)
 		{
-			const FItemData ItemInfo = InItem->ItemData;
+			CurrentItem.ItemName = ItemInfo.ItemName;
+			CurrentItem.ItemTexture = ItemInfo.ItemTexture;
+			CurrentItem.ItemType = ItemInfo.ItemType;
+			CurrentItem.ItemClass = ItemClass;
 			
-			Inventory[i].ItemName = ItemInfo.ItemName;
-			Inventory[i].ItemTexture = ItemInfo.ItemTexture;
-			Inventory[i].ItemType = ItemInfo.ItemType;
-			Inventory[i].ItemClass = ItemClass;
-
-			OnItemAdded.Broadcast(ItemInfo, i);
+			OnItemAdded.Broadcast(ItemInfo, InventoryIterator.GetIndex());
 			return true;
 		}
+		InventoryIterator.operator++();
 	}
+	
 	return false;
 }
 
